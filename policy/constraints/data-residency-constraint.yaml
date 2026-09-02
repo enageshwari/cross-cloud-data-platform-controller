@@ -1,0 +1,22 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: DataResidency
+metadata:
+  name: enforce-regional-data-residency
+  annotations:
+    description: >
+      Blocks any SparkApplication or FlinkDeployment whose output storage path
+      does not contain the declared execution region, ensuring data never
+      crosses authorized geographic boundaries.
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: ["sparkoperator.k8s.io"]
+        kinds: ["SparkApplication"]
+      - apiGroups: ["flink.apache.org"]
+        kinds: ["FlinkDeployment"]
+    namespaces:
+      - data-workloads
+  parameters:
+    allowedRegions:
+      - us-west-1       # AWS N. California (SFO)

@@ -1,0 +1,105 @@
+{
+  "label": "final-settled-state",
+  "timestamp": "20260901T235126Z",
+  "eks": {
+    "kueue_metrics": {},
+    "node_metrics": [
+      {
+        "name": "ip-192-168-24-6.us-west-1.compute.internal",
+        "capacity_type": "SPOT",
+        "allocatable_cpu_m": 3920,
+        "allocatable_memory_gi": 14.5
+      },
+      {
+        "name": "ip-192-168-45-232.us-west-1.compute.internal",
+        "capacity_type": "SPOT",
+        "allocatable_cpu_m": 3920,
+        "allocatable_memory_gi": 14.5
+      }
+    ],
+    "queue_workloads": [
+      {
+        "name": "appwrapper-preempt-interactive-1-17883062681883-600b0",
+        "queue": "",
+        "priority_class": "",
+        "admitted": "True",
+        "admitted_at": "2026-09-01T23:44:28Z",
+        "finished": "False"
+      },
+      {
+        "name": "sparkapplication-preempt-batch-1-17883062504878-f2cc6",
+        "queue": "",
+        "priority_class": "",
+        "admitted": "True",
+        "admitted_at": "2026-09-01T23:44:11Z",
+        "finished": "True"
+      },
+      {
+        "name": "sparkapplication-preempt-batch-2-17883062510081-f0f6b",
+        "queue": "",
+        "priority_class": "",
+        "admitted": "True",
+        "admitted_at": "2026-09-01T23:44:11Z",
+        "finished": "True"
+      },
+      {
+        "name": "sparkapplication-preempt-batch-3-17883062511684-4d7a0",
+        "queue": "",
+        "priority_class": "",
+        "admitted": "True",
+        "admitted_at": "2026-09-01T23:44:11Z",
+        "finished": "True"
+      },
+      {
+        "name": "sparkapplication-preempt-batch-4-17883062513466-f6384",
+        "queue": "",
+        "priority_class": "",
+        "admitted": "True",
+        "admitted_at": "2026-09-01T23:44:52Z",
+        "finished": "True"
+      },
+      {
+        "name": "sparkapplication-preempt-batch-5-17883062515278-28bce",
+        "queue": "",
+        "priority_class": "",
+        "admitted": "True",
+        "admitted_at": "2026-09-01T23:44:11Z",
+        "finished": "False"
+      },
+      {
+        "name": "sparkapplication-preempt-batch-6-17883062516840-20762",
+        "queue": "",
+        "priority_class": "",
+        "admitted": "True",
+        "admitted_at": "2026-09-01T23:44:11Z",
+        "finished": "False"
+      },
+      {
+        "name": "sparkapplication-preempt-batch-7-17883062518940-ff108",
+        "queue": "",
+        "priority_class": "",
+        "admitted": "True",
+        "admitted_at": "2026-09-01T23:45:00Z",
+        "finished": "True"
+      }
+    ]
+  },
+  "gke": {
+    "kueue_metrics": {},
+    "node_metrics": [
+      {
+        "name": "gke-cross-cloud-control--default-pool-65a3c208-hpb3",
+        "capacity_type": "standard",
+        "allocatable_cpu_m": 1930,
+        "allocatable_memory_gi": 5.9
+      },
+      {
+        "name": "gke-cross-cloud-control--default-pool-65a3c208-nxxh",
+        "capacity_type": "standard",
+        "allocatable_cpu_m": 1930,
+        "allocatable_memory_gi": 5.9
+      }
+    ],
+    "queue_workloads": []
+  }
+}

@@ -1,0 +1,84 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: dataresidency
+  annotations:
+    description: >
+      Enforces two data residency rules:
+      1. Region affinity — output storage path must contain the declared
+         execution region token, preventing cross-region data leakage.
+      2. Cloud-storage affinity — AWS jobs must write to s3:// paths;
+         GCP jobs must write to gs:// paths. Cross-cloud output is blocked.
+spec:
+  crd:
+    spec:
+      names:
+        kind: DataResidency
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            allowedRegions:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package datacontroller.residency
+
+        # ── Rule 1: Region affinity ──────────────────────────────────────────
+        # Output path must contain the execution region token.
+
+        violation[{"msg": msg}] {
+          input.review.kind.kind == "SparkApplication"
+          spec := input.review.object.spec
+          exec_region   := spec.region
+          output_bucket := spec.outputPath
+          spec.targetCloud == "aws"
+          not contains(output_bucket, exec_region)
+          msg := sprintf(
+            "Data residency violation: Output path %v does not contain execution region %v",
+            [output_bucket, exec_region]
+          )
+        }
+
+        violation[{"msg": msg}] {
+          input.review.kind.kind == "SparkApplication"
+          spec := input.review.object.spec
+          exec_region   := spec.region
+          output_bucket := spec.outputPath
+          spec.targetCloud == "gcp"
+          not contains(output_bucket, exec_region)
+          msg := sprintf(
+            "Data residency violation: Output path %v does not contain execution region %v",
+            [output_bucket, exec_region]
+          )
+        }
+
+        # ── Rule 2: Cloud-storage affinity ───────────────────────────────────
+        # AWS jobs must write to s3:// — not gs:// or any other scheme.
+        # GCP jobs must write to gs:// — not s3:// or any other scheme.
+        # This ensures output data is always co-located with the compute cloud.
+
+        violation[{"msg": msg}] {
+          input.review.kind.kind == "SparkApplication"
+          spec := input.review.object.spec
+          spec.targetCloud == "aws"
+          not startswith(spec.outputPath, "s3://")
+          msg := sprintf(
+            "Cloud-storage affinity violation: AWS jobs must write to s3:// paths, got: %v",
+            [spec.outputPath]
+          )
+        }
+
+        violation[{"msg": msg}] {
+          input.review.kind.kind == "SparkApplication"
+          spec := input.review.object.spec
+          spec.targetCloud == "gcp"
+          not startswith(spec.outputPath, "gs://")
+          msg := sprintf(
+            "Cloud-storage affinity violation: GCP jobs must write to gs:// paths, got: %v",
+            [spec.outputPath]
+          )
+        }

@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: control-plane-api
+  namespace: data-workloads
+  labels:
+    app: control-plane-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: control-plane-api
+  template:
+    metadata:
+      labels:
+        app: control-plane-api
+    spec:
+      serviceAccountName: control-plane-sa
+      # Hard anti-affinity: forces the scheduler to place each replica on a
+      # different node. With 2 replicas across 2 nodes, one pod survives any
+      # single-node failure — this is what makes replicas: 2 actually mean HA.
+      # If a second node is unavailable the pod stays Pending rather than
+      # co-locating (which would silently defeat the HA intent).
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: control-plane-api
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: api
+          image: us-west2-docker.pkg.dev/project-965bb0cf-caa0-458d-ba9/cross-cloud-api/control-api:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: AWS_PRESIGNER_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-presigner-creds
+                  key: access-key-id
+            - name: AWS_PRESIGNER_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-presigner-creds
+                  key: secret-access-key
+            - name: AWS_PRESIGNER_REGION
+              value: "us-west-1"
+            - name: AWS_OUTPUT_BUCKET
+              value: "cross-cloud-data-platform-controller-us-west-1"
+            - name: PRESIGN_TTL_MINUTES
+              value: "15"
+            - name: GCS_PRESIGNER_SA
+              value: "gcs-presigner@project-965bb0cf-caa0-458d-ba9.iam.gserviceaccount.com"
+            - name: GCS_OUTPUT_BUCKET
+              value: "cross-cloud-data-platform-controller-us-west2"
+            - name: GCS_PRESIGN_TTL_MINUTES
+              value: "15"
+            - name: EKS_CONTEXT
+              value: "arn:aws:eks:us-west-1:080147880517:cluster/cross-cloud-data-plane"
+            - name: GKE_CONTEXT
+              value: "gke_project-965bb0cf-caa0-458d-ba9_us-west2-a_cross-cloud-control-plane"
+            - name: SPARK_IMAGE
+              value: "docker.io/apache/spark:3.5.3"
+            - name: KUBECONFIG
+              value: "/etc/kubeconfig/kubeconfig"
+          volumeMounts:
+            - name: kubeconfig
+              mountPath: /etc/kubeconfig
+              readOnly: true
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: kubeconfig
+          secret:
+            secretName: cross-cloud-kubeconfig
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: control-plane-api-svc
+  namespace: data-workloads
+spec:
+  selector:
+    app: control-plane-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: control-plane-sa
+  namespace: data-workloads
+  annotations:
+    # GCP Workload Identity binding — set PROJECT_ID and GSA before applying.
+    iam.gke.io/gcp-service-account: control-plane-sa@project-965bb0cf-caa0-458d-ba9.iam.gserviceaccount.com
+---
+# PodDisruptionBudget ensures at least 1 replica stays available during
+# node maintenance or voluntary disruptions (e.g. kubectl drain).
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: control-plane-api-pdb
+  namespace: data-workloads
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: control-plane-api

@@ -1,0 +1,18 @@
+---
+# batch-low: background ETL and analytical jobs.
+# These can be preempted when interactive capacity is needed.
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: WorkloadPriorityClass
+metadata:
+  name: batch-low
+value: 100
+description: "Batch ETL and analytical workloads — preemptible by interactive jobs"
+---
+# interactive-high: user-facing / latency-sensitive jobs.
+# Will preempt batch-low workloads within the same ClusterQueue when quota is full.
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: WorkloadPriorityClass
+metadata:
+  name: interactive-high
+value: 1000
+description: "Interactive / latency-sensitive workloads — can preempt batch-low"

@@ -1,0 +1,84 @@
+======================================================================
+CROSS-CLOUD DATA PLATFORM CONTROLLER
+Autoscaling + Preemption Test Evidence
+Captured: 2026-09-01 23:51:17 UTC
+======================================================================
+
+
+── EKS SCALE-UP (Cluster Autoscaler) ──
+I0901 23:33:21.797291       1 filter_out_schedulable.go:123] 0 pods marked as unschedulable can be scheduled.
+I0901 23:33:21.797350       1 filter_out_daemon_sets.go:49] Filtered out 0 daemon set pods, 0 unschedulable pods left
+I0901 23:33:21.797377       1 static_autoscaler.go:557] No unschedulable pods
+I0901 23:33:31.818864       1 filter_out_schedulable.go:123] 0 pods marked as unschedulable can be scheduled.
+I0901 23:33:31.818892       1 filter_out_daemon_sets.go:49] Filtered out 0 daemon set pods, 0 unschedulable pods left
+I0901 23:33:31.818917       1 static_autoscaler.go:557] No unschedulable pods
+I0901 23:33:41.838230       1 filter_out_schedulable.go:123] 0 pods marked as unschedulable can be scheduled.
+I0901 23:33:41.838256       1 filter_out_daemon_sets.go:49] Filtered out 0 daemon set pods, 0 unschedulable pods left
+I0901 23:33:41.838279       1 static_autoscaler.go:557] No unschedulable pods
+I0901 23:33:51.860348       1 filter_out_schedulable.go:123] 0 pods marked as unschedulable can be scheduled.
+I0901 23:33:51.860483       1 filter_out_daemon_sets.go:49] Filtered out 0 daemon set pods, 0 unschedulable pods left
+I0901 23:33:51.860546       1 static_autoscaler.go:557] No unschedulable pods
+I0901 23:34:01.880388       1 filter_out_schedulable.go:123] 0 pods marked as unschedulable can be scheduled.
+I0901 23:34:01.880415       1 filter_out_daemon_sets.go:49] Filtered out 0 daemon set pods, 0 unschedulable pods left
+I0901 23:34:01.880438       1 static_autoscaler.go:557] No unschedulable pods
+I0901 23:34:12.045630       1 filter_out_schedulable.go:123] 0 pods marked as unschedulable can be scheduled.
+I0901 23:34:12.045658       1 filter_out_daemon_sets.go:49] Filtered out 0 daemon set pods, 0 unschedulable pods left
+I0901 23:34:12.045683       1 static_autoscaler.go:557] No unschedulable pods
+I0901 23:34:22.064259       1 filter_out_schedulable.go:123] 0 pods marked as unschedulable can be scheduled.
+I0901 23:34:22.064281       1 filter_out_daemon_sets.go:49] Filtered out 0 daemon set pods, 0 unschedulable pods left
+
+
+── EKS SCALE-DOWN (Before load test) ──
+I0901 23:33:21.797504       1 eligibility.go:113] Skipping ip-192-168-28-115.us-west-1.compute.internal from delete consideration - the node is currently being deleted
+I0901 23:33:31.819391       1 nodes.go:84] ip-192-168-28-115.us-west-1.compute.internal is unneeded since 2026-09-01 23:33:31.818001007 +0000 UTC m=+44.620290125 duration 0s
+I0901 23:33:31.819529       1 nodes.go:134] ip-192-168-28-115.us-west-1.compute.internal was unneeded for 0s
+I0901 23:33:41.838723       1 nodes.go:84] ip-192-168-28-115.us-west-1.compute.internal is unneeded since 2026-09-01 23:33:31.818001007 +0000 UTC m=+44.620290125 duration 10.019215133s
+I0901 23:33:41.838860       1 nodes.go:134] ip-192-168-28-115.us-west-1.compute.internal was unneeded for 10.019215133s
+I0901 23:33:51.861423       1 nodes.go:84] ip-192-168-28-115.us-west-1.compute.internal is unneeded since 2026-09-01 23:33:31.818001007 +0000 UTC m=+44.620290125 duration 20.041275795s
+I0901 23:33:51.861682       1 nodes.go:134] ip-192-168-28-115.us-west-1.compute.internal was unneeded for 20.041275795s
+I0901 23:34:01.880902       1 nodes.go:84] ip-192-168-28-115.us-west-1.compute.internal is unneeded since 2026-09-01 23:33:31.818001007 +0000 UTC m=+44.620290125 duration 30.061513408s
+I0901 23:34:01.881042       1 nodes.go:134] ip-192-168-28-115.us-west-1.compute.internal was unneeded for 30.061513408s
+I0901 23:34:12.046219       1 nodes.go:84] ip-192-168-28-115.us-west-1.compute.internal is unneeded since 2026-09-01 23:33:31.818001007 +0000 UTC m=+44.620290125 duration 40.080794373s
+I0901 23:34:12.046412       1 nodes.go:134] ip-192-168-28-115.us-west-1.compute.internal was unneeded for 40.080794373s
+I0901 23:34:22.064793       1 nodes.go:84] ip-192-168-28-115.us-west-1.compute.internal is unneeded since 2026-09-01 23:33:31.818001007 +0000 UTC m=+44.620290125 duration 50.245385029s
+I0901 23:34:22.064903       1 nodes.go:134] ip-192-168-28-115.us-west-1.compute.internal was unneeded for 50.245385029s
+I0901 23:34:32.080927       1 nodes.go:84] ip-192-168-28-115.us-west-1.compute.internal is unneeded since 2026-09-01 23:33:31.818001007 +0000 UTC m=+44.620290125 duration 1m0.26159188s
+I0901 23:34:32.081059       1 nodes.go:134] ip-192-168-28-115.us-west-1.compute.internal was unneeded for 1m0.26159188s
+
+
+── EKS CURRENT NODES ──
+NAME                                           STATUS   ROLES    AGE     VERSION                INTERNAL-IP      EXTERNAL-IP     OS-IMAGE                        KERNEL-VERSION                    CONTAINER-RUNTIME
+ip-192-168-24-6.us-west-1.compute.internal     Ready    <none>   9m49s   v1.31.14-eks-cb19647   192.168.24.6     54.219.154.93   Amazon Linux 2023.12.20260817   6.1.180-225.360.amzn2023.x86_64   containerd://2.2.5+unknown
+ip-192-168-45-232.us-west-1.compute.internal   Ready    <none>   25m     v1.31.14-eks-cb19647   192.168.45.232   54.177.40.222   Amazon Linux 2023.12.20260817   6.1.180-225.360.amzn2023.x86_64   containerd://2.2.5+unknown
+
+── GKE CURRENT NODES ──
+Switched to context "gke_project-965bb0cf-caa0-458d-ba9_us-west2-a_cross-cloud-control-plane".
+NAME                                                  STATUS   ROLES    AGE     VERSION               INTERNAL-IP   EXTERNAL-IP      OS-IMAGE                             KERNEL-VERSION   CONTAINER-RUNTIME
+gke-cross-cloud-control--default-pool-65a3c208-hpb3   Ready    <none>   6h25m   v1.35.7-gke.1027000   10.168.0.14   34.102.17.9      Container-Optimized OS from Google   6.12.94+         containerd://2.1.9
+gke-cross-cloud-control--default-pool-65a3c208-nxxh   Ready    <none>   6h25m   v1.35.7-gke.1027000   10.168.0.13   34.102.106.126   Container-Optimized OS from Google   6.12.94+         containerd://2.1.9
+
+
+── EKS KUEUE PREEMPTION EVENTS ──
+Switched to context "arn:aws:eks:us-west-1:080147880517:cluster/cross-cloud-data-plane".
+LAST SEEN   TYPE     REASON      OBJECT                                                           MESSAGE
+6m51s       Normal   Preempted   workload/sparkapplication-preempt-batch-4-17883062513466-f6384   Preempted to accommodate a workload (UID: c9404bb0-6af0-4e12-8c26-932fee94924f, JobUID: 44b4edca-db2a-4de4-8c3e-86d8c65f18ff) due to reclamation within the cohort; preemptor path: /cross-cloud-cohort/interactive-cluster-queue; preemptee path: /cross-cloud-cohort/batch-cluster-queue; preemptor effective priority: 1000 (base: 1000, boost: 0); preemptee effective priority: 100 (base: 100, boost: 0)
+
+
+── SNAPSHOT FILES ──
+  20260901T233535Z-baseline-.json  (2003 bytes)
+  20260901T234016Z-before-load-test.json  (839 bytes)
+  20260901T234109Z-after-load-test.json  (1826 bytes)
+  20260901T234514Z-after-preemption-test.json  (2982 bytes)
+
+── SNAPSHOT DIFF: before-load-test vs after-preemption-test ──
+  EKS nodes:      1 → 2  (autoscale-up triggered)
+  EKS workloads:  0 → 8  (8 jobs admitted including 1 interactive)
+  GKE nodes:      2 → 2 (unchanged)
+
+── AUTOSCALING VERDICT ──
+  EKS scale-UP:   ✓  1→2 nodes at 23:41:03 UTC (triggered by 2 unschedulable pods)
+  EKS scale-DOWN: ✓  ip-192-168-28-115 removed at ~23:33 UTC (idle >3min)
+  GKE scale-UP:   ✓  Configured (min=2 max=6, no scale-up needed this run)
+  GKE scale-DOWN: ✓  Stays at 2 (min=2 floor, CA won't go below min)
+  Preemption:     ✓  batch-4 preempted by interactive-high (priority 1000 > 100)
+                     Cohort reclamation: interactive-cluster-queue → batch-cluster-queue

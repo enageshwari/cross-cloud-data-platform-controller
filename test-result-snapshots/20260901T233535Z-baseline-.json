@@ -1,0 +1,73 @@
+{
+  "label": "baseline",
+  "timestamp": "20260901T233535Z",
+  "eks": {
+    "kueue_metrics": {},
+    "node_metrics": [
+      {
+        "name": "ip-192-168-28-115.us-west-1.compute.internal",
+        "capacity_type": "SPOT",
+        "allocatable_cpu_m": 3920,
+        "allocatable_memory_gi": 14.5
+      },
+      {
+        "name": "ip-192-168-45-232.us-west-1.compute.internal",
+        "capacity_type": "SPOT",
+        "allocatable_cpu_m": 3920,
+        "allocatable_memory_gi": 14.5
+      }
+    ],
+    "queue_workloads": [
+      {
+        "name": "appwrapper-load-test-interactive-1-17883051588496-54f98",
+        "queue": "",
+        "priority_class": "",
+        "admitted": "True",
+        "admitted_at": "2026-09-01T23:25:59Z",
+        "finished": "False"
+      },
+      {
+        "name": "sparkapplication-load-test-batch-1-17883051483918-baa04",
+        "queue": "",
+        "priority_class": "",
+        "admitted": "True",
+        "admitted_at": "2026-09-01T23:25:48Z",
+        "finished": "True"
+      },
+      {
+        "name": "sparkapplication-load-test-batch-2-17883051485297-1ad94",
+        "queue": "",
+        "priority_class": "",
+        "admitted": "True",
+        "admitted_at": "2026-09-01T23:25:48Z",
+        "finished": "True"
+      },
+      {
+        "name": "sparkapplication-load-test-batch-3-17883051486673-dbc98",
+        "queue": "",
+        "priority_class": "",
+        "admitted": "True",
+        "admitted_at": "2026-09-01T23:25:48Z",
+        "finished": "True"
+      }
+    ]
+  },
+  "gke": {
+    "kueue_metrics": {},
+    "node_metrics": [
+      {
+        "name": "gke-cross-cloud-control--default-pool-65a3c208-hpb3",
+        "capacity_type": "standard",
+        "allocatable_cpu_m": 1930,
+        "allocatable_memory_gi": 5.9
+      },
+      {
+        "name": "gke-cross-cloud-control--default-pool-65a3c208-nxxh",
+        "capacity_type": "standard",
+        "allocatable_cpu_m": 1930,
+        "allocatable_memory_gi": 5.9
+      }
+    ],
+    "queue_workloads": []
+  }
+}

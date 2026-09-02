@@ -1,0 +1,32 @@
+---
+# GCP standard flavor — standard (non-preemptible) GKE nodes.
+# Used for GCP workloads running on the control plane cluster (e2-standard-2).
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: ResourceFlavor
+metadata:
+  name: gcp-standard-flavor
+spec: {}
+---
+# AWS spot flavor — Spot nodes on EKS.
+# Requires eks.amazonaws.com/capacityType=SPOT node label.
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: ResourceFlavor
+metadata:
+  name: aws-spot-flavor
+spec:
+  nodeLabels:
+    eks.amazonaws.com/capacityType: SPOT
+  tolerations:
+    - key: "eks.amazonaws.com/capacityType"
+      operator: Equal
+      value: "SPOT"
+      effect: NoSchedule
+---
+# On-demand flavor — standard nodes with no spot requirement.
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: ResourceFlavor
+metadata:
+  name: on-demand-flavor
+spec:
+  nodeLabels:
+    node.kubernetes.io/instance-type: on-demand

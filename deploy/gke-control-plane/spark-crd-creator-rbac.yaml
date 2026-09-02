@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: spark-crd-creator
+rules:
+- apiGroups: ["sparkoperator.k8s.io"]
+  resources: ["sparkapplications"]
+  verbs: ["create","get","list","watch","delete","patch","update"]
+- apiGroups: ["workload.codeflare.dev"]
+  resources: ["appwrappers"]
+  verbs: ["create","get","list","watch","delete","patch","update"]
+- apiGroups: ["flink.apache.org"]
+  resources: ["flinkdeployments"]
+  verbs: ["create","get","list","watch","delete","patch","update"]

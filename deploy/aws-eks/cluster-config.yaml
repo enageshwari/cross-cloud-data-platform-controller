@@ -1,0 +1,47 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: cross-cloud-data-plane
+  region: us-west-1
+  version: "1.31"
+
+# Enable OIDC provider — required for IRSA (IAM Roles for Service Accounts)
+iam:
+  withOIDC: true
+
+# Managed node group — 2 spot t3.xlarge nodes
+# t3.xlarge: 4 vCPU, 16GB RAM — enough for Spark driver + 1 executor
+# Spot saves ~70% vs on-demand
+managedNodeGroups:
+  - name: spot-data-workers
+    instanceTypes:
+      - t3.xlarge
+      - t3a.xlarge     # fallback if t3.xlarge spot unavailable
+    spot: true
+    minSize: 0
+    maxSize: 4
+    # Hard anti-affinity equivalent: spread across AZs
+    availabilityZones:
+      - us-west-1a
+      - us-west-1c
+    labels:
+      workload-type: batch-data
+    # Spot interruption handling is automatic via EKS Node Termination Handler
+    iam:
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+    # Keep nodes small — Spark jobs use tolerations to land here
+    tags:
+      project: cross-cloud-data-platform-controller
+      environment: showcase
+      cost-center: data-platform
+
+# CloudWatch logging — minimal, only API server
+cloudWatch:
+  clusterLogging:
+    enableTypes:
+      - api

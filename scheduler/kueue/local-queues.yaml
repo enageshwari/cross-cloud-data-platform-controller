@@ -1,0 +1,24 @@
+---
+# Low-priority queue for background batch jobs (Spark ETL, Flink streaming).
+# Runs on spot/standard nodes and can be preempted by interactive workloads.
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: LocalQueue
+metadata:
+  name: batch-data-queue
+  namespace: data-workloads
+  annotations:
+    description: "Batch jobs — Spark ETL, Flink streaming. Preemptible by interactive queue."
+spec:
+  clusterQueue: multi-cloud-cluster-queue
+---
+# High-priority queue for interactive or latency-sensitive workloads.
+# Preempts batch-data-queue jobs when resources are exhausted.
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: LocalQueue
+metadata:
+  name: interactive-data-queue
+  namespace: data-workloads
+  annotations:
+    description: "Interactive workloads — high priority, preempts batch."
+spec:
+  clusterQueue: multi-cloud-cluster-queue

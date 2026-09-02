@@ -1,0 +1,49 @@
+# Standalone Prometheus scrape_config snippet for Kueue metrics.
+# Add this to your prometheus.yaml under scrape_configs:
+#
+# Instructions:
+#   1. Run: kubectl port-forward -n kueue-system svc/kueue-controller-manager-metrics-service 9091:8443
+#   2. Add this config to prometheus.yml under scrape_configs
+#   3. Restart Prometheus
+#
+# Or use the ServiceMonitor in prometheus-scrape.yaml if using Prometheus Operator.
+
+# scrape_configs:
+#   - job_name: 'kueue-eks'
+#     scheme: https
+#     tls_config:
+#       insecure_skip_verify: true
+#     static_configs:
+#       - targets: ['localhost:9091']
+#         labels:
+#           cluster: 'cross-cloud-data-plane'
+#           cloud: 'aws'
+#
+#   - job_name: 'kueue-gke'
+#     scheme: https
+#     tls_config:
+#       insecure_skip_verify: true
+#     static_configs:
+#       - targets: ['localhost:9092']
+#         labels:
+#           cluster: 'cross-cloud-control-plane'
+#           cloud: 'gcp'
+#
+# Key Grafana queries for batch vs interactive contention:
+#
+#   Queue depth over time:
+#     kueue_pending_workloads{cluster_queue=~"batch.*|interactive.*"}
+#
+#   Preemptions (interactive evicting batch):
+#     increase(kueue_evicted_workloads_total{reason="Preempted"}[5m])
+#
+#   Active workloads per queue:
+#     kueue_admitted_active_workloads
+#
+#   CPU reservation vs quota:
+#     kueue_cluster_queue_resource_reservation{resource="cpu"}
+#       / on(cluster_queue, flavor)
+#     kueue_cluster_queue_nominal_quota{resource="cpu"}
+#
+#   Admission rate (jobs admitted per minute):
+#     rate(kueue_admitted_workloads_total[1m])

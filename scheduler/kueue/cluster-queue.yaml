@@ -1,0 +1,44 @@
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: ClusterQueue
+metadata:
+  name: multi-cloud-cluster-queue
+  annotations:
+    description: >
+      Top-level cluster queue covering GCP and AWS spot flavors plus on-demand.
+      Batch and interactive workloads are separated via LocalQueues to
+      prevent resource starvation and ensure quick feedback loops for
+      interactive sessions.
+spec:
+  namespaceSelector: {}
+  preemption:
+    reclaimWithinCohort: LowerPriority
+    borrowWithinCohort:
+      policy: LowerPriority
+      maxPriorityThreshold: 100
+  resourceGroups:
+    - coveredResources: ["cpu", "memory"]
+      flavors:
+        - name: gcp-standard-flavor
+          resources:
+            - name: cpu
+              nominalQuota: "16"
+            - name: memory
+              nominalQuota: 64Gi
+        - name: gcp-spot-flavor
+          resources:
+            - name: cpu
+              nominalQuota: "16"
+            - name: memory
+              nominalQuota: 64Gi
+        - name: aws-spot-flavor
+          resources:
+            - name: cpu
+              nominalQuota: "16"
+            - name: memory
+              nominalQuota: 64Gi
+        - name: on-demand-flavor
+          resources:
+            - name: cpu
+              nominalQuota: "8"
+            - name: memory
+              nominalQuota: 32Gi

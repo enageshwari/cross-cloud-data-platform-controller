@@ -1,0 +1,51 @@
+# GCP GKE Node Pool — Preemptible VMs for batch data workloads.
+#
+# STATUS: Not yet provisioned. The current GCP data plane uses the control plane
+# cluster's standard e2-standard-2 nodes (gcp-standard-flavor in Kueue).
+# This node pool is for a dedicated GCP data plane with preemptible nodes.
+# When provisioned, activate gcp-spot-flavor in scheduler/kueue/resource-flavors.yaml
+# and update the ClusterQueue to use it as the primary GCP flavor.
+#
+# gcloud container node-pools create spot-data-workers \
+#   --cluster=cross-cloud-data-plane \
+#   --region=us-central1 \
+#   --machine-type=n2-standard-8 \
+#   --spot \
+#   --num-nodes=2 \
+#   --min-nodes=0 \
+#   --max-nodes=20 \
+#   --enable-autoscaling \
+#   --node-labels=workload-type=batch-data,cloud.google.com/gke-spot=true \
+#   --node-taints=cloud.google.com/gke-spot=true:NoSchedule \
+#   --workload-metadata=GKE_METADATA
+#
+# This YAML is the declarative equivalent for reference / GitOps workflows.
+apiVersion: container.cnrm.cloud.google.com/v1beta1
+kind: ContainerNodePool
+metadata:
+  name: spot-data-workers
+  namespace: config-connector          # Requires Config Connector installed on control plane GKE
+spec:
+  clusterRef:
+    name: cross-cloud-data-plane       # Replace with your GKE cluster resource name
+  location: us-central1               # Update per target region
+  autoscaling:
+    minNodeCount: 0
+    maxNodeCount: 20
+  nodeConfig:
+    machineType: n2-standard-8
+    spot: true
+    workloadMetadataConfig:
+      mode: GKE_METADATA
+    labels:
+      workload-type: batch-data
+      cloud.google.com/gke-spot: "true"
+    taints:
+      - key: cloud.google.com/gke-spot
+        value: "true"
+        effect: NO_SCHEDULE
+    oauthScopes:
+      - https://www.googleapis.com/auth/devstorage.read_only
+      - https://www.googleapis.com/auth/logging.write
+      - https://www.googleapis.com/auth/monitoring
+  initialNodeCount: 2

@@ -1,0 +1,25 @@
+# Go binaries and build artifacts
+api/bin/
+api/server
+api/control-api
+*.exe
+*.test
+*.out
+
+# Go module cache
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# macOS
+.DS_Store
+
+# Secrets — never commit these
+*.pem
+*.key
+*.env
+kubeconfig
+metrics-snapshots/

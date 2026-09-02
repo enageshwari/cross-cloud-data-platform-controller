@@ -1,0 +1,38 @@
+# AWS EKS Managed Node Group — Spot instances for batch data workloads.
+# Apply via eksctl or embed in your cluster config.
+#
+# Prerequisites:
+#   - EKS cluster already provisioned
+#   - IAM OIDC provider enabled on the cluster
+#   - Node IAM role with AmazonEKSWorkerNodePolicy, AmazonEKS_CNI_Policy, AmazonEC2ContainerRegistryReadOnly
+#
+# eksctl create nodegroup -f this file
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: cross-cloud-data-plane        # Replace with your EKS cluster name
+  region: us-west-2                   # Update per target region
+
+managedNodeGroups:
+  - name: spot-data-workers
+    instanceTypes:
+      - m5.2xlarge
+      - m5a.2xlarge
+      - m4.2xlarge
+    spot: true
+    minSize: 0
+    maxSize: 20
+    desiredCapacity: 2
+    labels:
+      workload-type: batch-data
+      eks.amazonaws.com/capacityType: SPOT
+    taints:
+      - key: eks.amazonaws.com/capacityType
+        value: SPOT
+        effect: NoSchedule
+    iam:
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
