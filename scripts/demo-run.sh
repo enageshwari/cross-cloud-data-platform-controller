@@ -17,6 +17,7 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 API="${1:-http://localhost:9090}"
+START_CASE="${2:-1}"   # set to 3 to skip cases 1-2, e.g.: ./scripts/demo-run.sh http://localhost:9090 3
 EKS_CTX="arn:aws:eks:us-west-1:080147880517:cluster/cross-cloud-data-plane"
 GKE_CTX="gke_project-965bb0cf-caa0-458d-ba9_us-west2-a_cross-cloud-control-plane"
 NS="data-workloads"
@@ -120,6 +121,7 @@ done
 pause
 
 # ── Case 1: AWS Spark ──────────────────────────────────────────────────────
+if [[ $START_CASE -le 1 ]]; then
 header "CASE 1: AWS Spark — SparkApplication → EKS → S3"
 config "spark" "aws" "us-west-1" "batch-low"
 jar_info "local:///opt/spark/examples/jars/spark-examples_2.12-3.5.3.jar (SparkPi — calculates pi)"
@@ -145,8 +147,10 @@ ok "spark_application: $SPARK_APP"
 info "Waiting for completion..."
 wait_spark "$SPARK_APP" "$EKS_CTX"
 pause
+fi # end case 1
 
 # ── Case 2: AWS Flink ──────────────────────────────────────────────────────
+if [[ $START_CASE -le 2 ]]; then
 header "CASE 2: AWS Flink — AppWrapper → EKS → S3"
 config "flink" "aws" "us-west-1" "batch-low"
 jar_info "local:///opt/flink/examples/streaming/WordCount.jar (bundled WordCount streaming job)"
@@ -173,6 +177,7 @@ sleep 10
 info "Waiting for completion..."
 wait_flink "$AW" "$EKS_CTX"
 pause
+fi # end case 2
 
 # ── Case 3: GCP Spark ──────────────────────────────────────────────────────
 header "CASE 3: GCP Spark — SparkApplication → GKE → GCS"
