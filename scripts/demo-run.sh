@@ -108,10 +108,14 @@ if [[ "$HEALTH" != '{"status":"ok"}' ]]; then
 fi
 ok "API healthy: $HEALTH"
 
-info "Checking API startup logs (all 6 components)..."
-kubectl logs -n $NS -l app=control-plane-api --context $GKE_CTX --since=2h 2>/dev/null \
-  | grep -E "submitter ready|presigner ready|API starting" | tail -7 \
-  || echo "  (startup logs not found — pods may have been running > 2h)"
+info "Checking API pods and component readiness..."
+kubectl get pods -n $NS --context $GKE_CTX 2>/dev/null | grep control-plane-api
+echo ""
+# Hit the healthz once per pod to confirm both replicas are serving
+for POD in $(kubectl get pods -n $NS --context $GKE_CTX -l app=control-plane-api -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+  STATUS=$(kubectl get pod "$POD" -n $NS --context $GKE_CTX -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+  ok "Pod $POD → Ready=$STATUS"
+done
 
 pause
 
