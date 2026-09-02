@@ -4,66 +4,6 @@ A GKE-hosted control plane for submitting and governing Spark and Flink batch wo
 
 ## Quick Start — Local (no cloud required)
 
-```
-api/                               Go control plane
-  cmd/server/main.go               Entry point — initialises all 6 components on startup
-  internal/handler/jobs.go         HTTP handler — routes by (engine, target_cloud)
-  internal/spark/submitter.go      SparkApplication CRD submitter (dynamic K8s client)
-  internal/flink/submitter.go      AppWrapper CRD submitter (dynamic K8s client)
-  internal/presigner/              S3 presigner (AWS SDK v2) + GCS signer (IAM SignBlob)
-  internal/validator/              Schema validation
-  internal/model/job.go            Request/response structs
-  Dockerfile                       Multi-stage distroless build
-
-deploy/
-  gke-control-plane/
-    control-api-deployment.yaml    Deployment, Service, ServiceAccount, PDB
-    namespace.yaml                 data-workloads namespace
-    spark-crd-creator-rbac.yaml    ClusterRole + bindings for CRD dispatch
-  aws-eks/
-    cluster-config.yaml            eksctl cluster definition
-    spot-nodegroup.yaml            Spot node group config
-    cluster-autoscaler.yaml        CA deployment
-    cluster-autoscaler-policy.json IAM policy for Cluster Autoscaler
-    spark-test-job.yaml            Sample SparkApplication for OPA testing
-  gcp-gke/
-    preemptible-nodepool.yaml      Future preemptible node pool (not yet provisioned)
-
-policy/
-  templates/                       OPA ConstraintTemplate — DataResidency (Rego)
-  constraints/                     DataResidency constraint (enforce mode)
-
-scheduler/kueue/
-  resource-flavors.yaml            gcp-standard-flavor, aws-spot-flavor, on-demand-flavor
-  cluster-queue.yaml               multi-cloud-cluster-queue with cohort + preemption
-  local-queues.yaml                batch-data-queue, interactive-data-queue
-  priority-classes.yaml            batch-low (100), interactive-high (1000)
-  prometheus-scrape-config.yaml    Manual Prometheus scrape config snippet
-  prometheus-scrape.yaml           Prometheus Operator ServiceMonitor + RBAC
-
-scripts/
-  *.sh                             Test and ops shell scripts (see docs/TESTING.md)
-  assemble_snapshot.py             Snapshot assembler (used by metrics-snapshot.sh)
-  parse_nodes.py                   Node metrics parser
-  parse_workloads.py               Kueue workload parser
-  scrape_kueue.py                  Kueue /metrics scraper
-  capture-autoscale-evidence.py    CA log and node state collector
-
-test-result-snapshots/
-  20260901T*.json                  Metrics snapshots from load/preemption tests
-  20260902T190212Z-post-gcp*.json  Post-GCP-verification snapshot
-  autoscaling-preemption-test-evidence.txt  CA scale events + preemption event log
-
-docs/
-  DESIGN.md                        HLD diagrams, LLD, component inventory, observability
-  REQUIREMENTS.md                  Functional and non-functional requirements
-  TESTING.md                       Test methodology, verified results for all 4 paths
-  CONTRIBUTIONS.md                 Setup guide, future enhancements
-  TROUBLESHOOTING.md               Known issues and fixes
-```
-
-## Quick Start — Local (no cloud required)
-
 ```bash
 cd api
 go build -o /tmp/control-api ./cmd/server
@@ -120,6 +60,34 @@ kubectl create secret generic cross-cloud-kubeconfig \
 ```
 
 > **Prerequisites:** OPA Gatekeeper, Kueue, Spark Operator, and Flink Operator (with AppWrapper) must be installed on each target cluster. See `docs/CONTRIBUTIONS.md §2` for full cluster setup.
+
+## Project Layout
+
+```
+api/                               Go control plane
+  cmd/server/main.go               Entry point — initialises all 6 components on startup
+  internal/handler/jobs.go         HTTP handler — routes by (engine, target_cloud)
+  internal/spark/submitter.go      SparkApplication CRD submitter (dynamic K8s client)
+  internal/flink/submitter.go      AppWrapper CRD submitter (dynamic K8s client)
+  internal/presigner/              S3 presigner (AWS SDK v2) + GCS signer (IAM SignBlob)
+  internal/validator/              Schema validation
+  internal/model/job.go            Request/response structs
+  Dockerfile                       Multi-stage distroless build
+
+deploy/
+  gke-control-plane/               Deployment, Service, ServiceAccount, PDB, RBAC
+  aws-eks/                         eksctl cluster config, Spot node group, CA policy
+  gcp-gke/                         Preemptible node pool (not yet provisioned)
+
+policy/
+  templates/                       OPA ConstraintTemplate — DataResidency (Rego)
+  constraints/                     DataResidency constraint (enforce mode)
+
+scheduler/kueue/                   ClusterQueue, LocalQueues, ResourceFlavors, Prometheus
+scripts/                           Test and ops scripts — run demo: ./scripts/demo-run.sh
+test-result-snapshots/             Captured metrics, preemption evidence, CA logs
+docs/                              DESIGN, REQUIREMENTS, TESTING, CONTRIBUTIONS, TROUBLESHOOTING
+```
 
 ## Architecture
 
