@@ -122,7 +122,7 @@ pause
 # ── Case 1: AWS Spark ──────────────────────────────────────────────────────
 header "CASE 1: AWS Spark — SparkApplication → EKS → S3"
 config "spark" "aws" "us-west-1" "batch-low"
-jar_info "local:///opt/spark/examples/jars/spark-examples_2.12-3.5.3.jar (SparkPi — calculates π)"
+jar_info "local:///opt/spark/examples/jars/spark-examples_2.12-3.5.3.jar (SparkPi — calculates pi)"
 info "Submitting..."
 
 RESP=$(curl -s -X POST $API/api/v1/jobs \
@@ -177,7 +177,7 @@ pause
 # ── Case 3: GCP Spark ──────────────────────────────────────────────────────
 header "CASE 3: GCP Spark — SparkApplication → GKE → GCS"
 config "spark" "gcp" "us-west2" "batch-low"
-jar_info "local:///opt/spark/examples/jars/spark-examples_2.12-3.5.3.jar (SparkPi — calculates π)"
+jar_info "local:///opt/spark/examples/jars/spark-examples_2.12-3.5.3.jar (SparkPi — calculates pi)"
 info "Submitting..."
 
 RESP=$(curl -s -X POST $API/api/v1/jobs \
