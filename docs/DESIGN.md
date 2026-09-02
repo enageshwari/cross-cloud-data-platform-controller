@@ -17,31 +17,34 @@ A single GKE management cluster houses the Go control plane, OPA policy engine, 
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                    CENTRAL MANAGEMENT CLUSTER — GKE                        │
 │                                                                            │
-│  ┌──────────────────┐   ┌──────────────────┐   ┌──────────────────────┐    │
-│  │  Go Control API  │──▶│  OPA Gatekeeper  │──▶│  Kueue Scheduler     │    │
-│  │  POST /api/v1/   │   │  DataResidency   │   │  ClusterQueue        │    │
-│  │  jobs            │   │  (region + cloud │   │  batch / interactive │    │
-│  │  S3 presigner    │   │   affinity)      │   │  LocalQueues         │    │
-│  │  GCS signer      │   └──────────────────┘   └──────────────────────┘    │
-│  │  CRD submitter   │                                                      │
-│  └────────┬─────────┘                                                      │
-│           │ cross-cloud-kubeconfig Secret                                  │
-│           │ (static SA tokens, 24h TTL, CRD create scope only)             │
-└───────────┼────────────────────────────────────────────────────────────────┘
-            │  Dispatch (SparkApplication / AppWrapper CRD + signed credential)
-     ┌──────┴──────────────────────────────┐
-     │                                     │
-     ▼                                     ▼
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │  Go Control API                                                      │  │
+│  │  POST /api/v1/jobs                                                   │  │
+│  │  • Schema validation           • S3 presigner (AWS SDK v2)           │  │
+│  │  • GCS signer (IAM SignBlob)   • SparkApplication / AppWrapper CRD  │  │
+│  │  • cross-cloud-kubeconfig Secret (static SA tokens, 24h TTL)        │  │
+│  └─────────────────────────────────┬────────────────────────────────────┘  │
+└─────────────────────────────────────┼──────────────────────────────────────┘
+                                      │  Dispatch CRD + signed credential
+                     ┌────────────────┴────────────────┐
+                     │                                 │
+                     ▼                                 ▼
 ┌───────────────────────────┐   ┌───────────────────────────┐
 │  AWS EKS DATA PLANE       │   │  GCP GKE DATA PLANE       │
 │  us-west-1 (spot nodes)   │   │  us-west2-a (std nodes)   │
+│                           │   │                           │
+│  OPA Gatekeeper           │   │  OPA Gatekeeper           │
+│  (validates CRD at        │   │  (validates CRD at        │
+│   K8s admission)          │   │   K8s admission)          │
+│                           │   │                           │
+│  Kueue                    │   │  Kueue                    │
+│  (queues + preempts)      │   │  (queues + preempts)      │
+│                           │   │                           │
 │  Spark Operator           │   │  Spark Operator           │
 │  Flink Operator           │   │  Flink Operator           │
 │  AppWrapper controller    │   │  AppWrapper controller    │
-│  Kueue                    │   │  Kueue                    │
-│  OPA Gatekeeper           │   │  OPA Gatekeeper           │
 │  Cluster Autoscaler       │   │  Workload Identity        │
-└─────────────┬─────────────┘   └────────────-─┬────────────┘
+└─────────────┬─────────────┘   └─────────────┬─────────────┘
               │ IRSA                           │ Workload Identity
               │ (no credentials in pod)        │ (no credentials in pod)
               ▼                                ▼
