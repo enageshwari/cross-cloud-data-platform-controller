@@ -11,7 +11,7 @@
 #
 # Usage:
 #   cd ~/nagelan/cross-cloud-data-platform-controller
-#   ./scripts/demo-run.sh
+#   ./scripts/demo-run.sh [api_url]
 
 set -euo pipefail
 
@@ -26,17 +26,74 @@ CYAN='\033[0;36m'
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[0;33m'
+DIM='\033[2m'
 NC='\033[0m'
 
-header() { echo "\n${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n  $1\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"; }
-ok()     { echo "${GREEN}✓ $1${NC}"; }
-info()   { echo "${YELLOW}▶ $1${NC}"; }
-pause()  { echo "\n${BOLD}Press Enter to continue...${NC}"; read; }
-config() {
+header()  { echo "\n${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n  $1\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"; }
+ok()      { echo "${GREEN}✓ $1${NC}"; }
+info()    { echo "${YELLOW}▶ $1${NC}"; }
+pause()   { echo "\n${BOLD}Press Enter to continue...${NC}"; read; }
+config()  {
   echo "${BOLD}  engine:       $1${NC}"
   echo "${BOLD}  target_cloud: $2${NC}"
   echo "${BOLD}  region:       $3${NC}"
   echo "${BOLD}  priority:     $4${NC}"
+}
+jar_info() {
+  echo "${DIM}  JAR:  $1${NC}"
+  echo "${DIM}  type: bundled inside container image (local:///) — no upload needed${NC}"
+  echo "${DIM}  custom JAR: set artifact_uri to s3://bucket/jars/my.jar or gs://bucket/jars/my.jar${NC}"
+  echo "${DIM}              and set main_class to your entry point${NC}"
+}
+
+# ── wait_spark: poll until SparkApplication reaches terminal state ──────────
+wait_spark() {
+  local name="$1" ctx="$2" timeout=180 elapsed=0
+  echo ""
+  while [[ $elapsed -lt $timeout ]]; do
+    STATUS=$(kubectl get sparkapplication "$name" -n $NS --context "$ctx" \
+      -o jsonpath='{.status.applicationState.state}' 2>/dev/null || echo "")
+    printf "\r  status: %-20s  (%ds elapsed)" "$STATUS" "$elapsed"
+    if [[ "$STATUS" == "COMPLETED" || "$STATUS" == "FAILED" || "$STATUS" == "SUBMISSION_FAILED" ]]; then
+      echo ""
+      if [[ "$STATUS" == "COMPLETED" ]]; then
+        ok "SparkApplication $name → $STATUS"
+      else
+        echo "${RED}✗ SparkApplication $name → $STATUS${NC}"
+      fi
+      kubectl get sparkapplication "$name" -n $NS --context "$ctx" 2>/dev/null | cat
+      return
+    fi
+    sleep 5
+    elapsed=$((elapsed+5))
+  done
+  echo "\n${YELLOW}  timeout — final state:${NC}"
+  kubectl get sparkapplication "$name" -n $NS --context "$ctx" 2>/dev/null | cat
+}
+
+# ── wait_flink: poll until FlinkDeployment job status reaches terminal state
+wait_flink() {
+  local name="$1" ctx="$2" timeout=180 elapsed=0
+  echo ""
+  while [[ $elapsed -lt $timeout ]]; do
+    STATUS=$(kubectl get flinkdeployment "$name" -n $NS --context "$ctx" \
+      -o jsonpath='{.status.jobStatus.state}' 2>/dev/null || echo "")
+    printf "\r  job status: %-20s  (%ds elapsed)" "$STATUS" "$elapsed"
+    if [[ "$STATUS" == "FINISHED" || "$STATUS" == "FAILED" || "$STATUS" == "CANCELED" ]]; then
+      echo ""
+      if [[ "$STATUS" == "FINISHED" ]]; then
+        ok "FlinkDeployment $name → $STATUS"
+      else
+        echo "${RED}✗ FlinkDeployment $name → $STATUS${NC}"
+      fi
+      kubectl get flinkdeployment "$name" -n $NS --context "$ctx" 2>/dev/null | cat
+      return
+    fi
+    sleep 5
+    elapsed=$((elapsed+5))
+  done
+  echo "\n${YELLOW}  timeout — final state:${NC}"
+  kubectl get flinkdeployment "$name" -n $NS --context "$ctx" 2>/dev/null | cat
 }
 
 # ── Preflight ──────────────────────────────────────────────────────────────
@@ -54,13 +111,14 @@ ok "API healthy: $HEALTH"
 info "Checking API startup logs (all 6 components)..."
 kubectl logs -n $NS -l app=control-plane-api --context $GKE_CTX --since=2h 2>/dev/null \
   | grep -E "submitter ready|presigner ready|API starting" | tail -7 \
-  || echo "  (startup logs not found — pods may have been running > 2h; check manually)"
+  || echo "  (startup logs not found — pods may have been running > 2h)"
 
 pause
 
 # ── Case 1: AWS Spark ──────────────────────────────────────────────────────
 header "CASE 1: AWS Spark — SparkApplication → EKS → S3"
 config "spark" "aws" "us-west-1" "batch-low"
+jar_info "local:///opt/spark/examples/jars/spark-examples_2.12-3.5.3.jar (SparkPi — calculates π)"
 info "Submitting..."
 
 RESP=$(curl -s -X POST $API/api/v1/jobs \
@@ -80,19 +138,14 @@ echo "$RESP" | python3 -m json.tool
 SPARK_APP=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('spark_application',''))")
 ok "spark_application: $SPARK_APP"
 
-info "Watching SparkApplication on EKS..."
-kubectl get sparkapplication $SPARK_APP -n $NS --context $EKS_CTX -w &
-WATCH_PID=$!
-sleep 30
-kill $WATCH_PID 2>/dev/null
-
-info "Final status:"
-kubectl get sparkapplication $SPARK_APP -n $NS --context $EKS_CTX 2>/dev/null || echo "(may have completed)"
+info "Waiting for completion..."
+wait_spark "$SPARK_APP" "$EKS_CTX"
 pause
 
 # ── Case 2: AWS Flink ──────────────────────────────────────────────────────
 header "CASE 2: AWS Flink — AppWrapper → EKS → S3"
 config "flink" "aws" "us-west-1" "batch-low"
+jar_info "local:///opt/flink/examples/streaming/WordCount.jar (bundled WordCount streaming job)"
 info "Submitting..."
 
 RESP=$(curl -s -X POST $API/api/v1/jobs \
@@ -111,15 +164,16 @@ echo "$RESP" | python3 -m json.tool
 AW=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('spark_application',''))")
 ok "appwrapper: $AW"
 
-sleep 15
-kubectl get appwrapper $AW -n $NS --context $EKS_CTX 2>/dev/null | cat
-kubectl get flinkdeployment $AW -n $NS --context $EKS_CTX 2>/dev/null | cat || true
-kubectl get pods -n $NS --context $EKS_CTX 2>/dev/null | grep $AW || true
+info "Waiting for FlinkDeployment to be created..."
+sleep 10
+info "Waiting for completion..."
+wait_flink "$AW" "$EKS_CTX"
 pause
 
 # ── Case 3: GCP Spark ──────────────────────────────────────────────────────
 header "CASE 3: GCP Spark — SparkApplication → GKE → GCS"
 config "spark" "gcp" "us-west2" "batch-low"
+jar_info "local:///opt/spark/examples/jars/spark-examples_2.12-3.5.3.jar (SparkPi — calculates π)"
 info "Submitting..."
 
 RESP=$(curl -s -X POST $API/api/v1/jobs \
@@ -139,19 +193,14 @@ echo "$RESP" | python3 -m json.tool
 SPARK_APP=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('spark_application',''))")
 ok "spark_application: $SPARK_APP"
 
-info "Watching SparkApplication on GKE..."
-kubectl get sparkapplication $SPARK_APP -n $NS --context $GKE_CTX -w &
-WATCH_PID=$!
-sleep 30
-kill $WATCH_PID 2>/dev/null
-
-info "Final status:"
-kubectl get sparkapplication $SPARK_APP -n $NS --context $GKE_CTX 2>/dev/null || echo "(may have completed)"
+info "Waiting for completion..."
+wait_spark "$SPARK_APP" "$GKE_CTX"
 pause
 
 # ── Case 4: GCP Flink ──────────────────────────────────────────────────────
 header "CASE 4: GCP Flink — AppWrapper → GKE → GCS"
 config "flink" "gcp" "us-west2" "interactive-high"
+jar_info "local:///opt/flink/examples/streaming/WordCount.jar (bundled WordCount streaming job)"
 info "Submitting..."
 
 RESP=$(curl -s -X POST $API/api/v1/jobs \
@@ -170,20 +219,20 @@ echo "$RESP" | python3 -m json.tool
 AW=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('spark_application',''))")
 ok "appwrapper: $AW"
 
-sleep 15
-kubectl get appwrapper $AW -n $NS --context $GKE_CTX 2>/dev/null | cat
-kubectl get flinkdeployment $AW -n $NS --context $GKE_CTX 2>/dev/null | cat || true
-kubectl get pods -n $NS --context $GKE_CTX 2>/dev/null | grep $AW || true
+info "Waiting for FlinkDeployment to be created..."
+sleep 10
+info "Waiting for completion..."
+wait_flink "$AW" "$GKE_CTX"
 pause
 
 # ── Case 5: OPA Enforcement ────────────────────────────────────────────────
 header "CASE 5: OPA Enforcement — Cross-Region Violation"
-echo "  What we're testing: output_path contains 'us-east-1' but declared region is 'us-west-1'"
-echo "  OPA rule: outputPath must contain the declared region token"
-echo "  Expected: admission DENIED — CRD never lands in etcd"
+echo "  Testing: output_path region token (us-east-1) ≠ declared region (us-west-1)"
+echo "  OPA rule: outputPath must contain the declared region — hard DENY at admission"
+echo "  Note: using kubectl apply directly so the webhook error is immediately visible"
 echo ""
 
-info "Applying SparkApplication directly via kubectl (bypasses API, OPA still fires)..."
+info "Applying SparkApplication with wrong region..."
 kubectl apply -f - --context $EKS_CTX <<EOF
 apiVersion: sparkoperator.k8s.io/v1beta2
 kind: SparkApplication
@@ -200,39 +249,35 @@ spec:
   mainClass: org.apache.spark.examples.SparkPi
   mainApplicationFile: local:///opt/spark/examples/jars/spark-examples_2.12-3.5.3.jar
 EOF
-echo "" && echo "${RED}^ If you see 'denied' above — OPA is working correctly${NC}"
+echo "${RED}^ 'denied' above means OPA enforcement is working ✓${NC}"
 
-info "OPA constraint violations:"
+info "OPA constraint active:"
 kubectl get dataresidency --context $EKS_CTX 2>/dev/null | cat
 pause
 
 # ── Case 6: Preemption ─────────────────────────────────────────────────────
 header "CASE 6: Priority Preemption — interactive-high preempts batch-low"
-echo "  How it works:"
-echo "  - Both queues share a Kueue cohort (shared quota pool)"
-echo "  - interactive-high (priority 1000) can reclaim quota from batch-low (100)"
-echo "  - Preemption fires when batch jobs hold quota that interactive needs"
+echo "  Both queues share a Kueue cohort — interactive-high (1000) reclaims"
+echo "  quota from batch-low (100) via reclaimWithinCohort: LowerPriority"
 echo ""
 
-info "Current ClusterQueue quota state:"
+info "Current ClusterQueue quota:"
 kubectl get clusterqueue multi-cloud-cluster-queue -o wide --context $EKS_CTX 2>/dev/null | cat
 
-info "Submitting 5 batch-low Spark jobs to saturate the queue..."
-BATCH_APPS=()
+info "Submitting 5 batch-low Spark jobs..."
 for i in 1 2 3 4 5; do
   RESP=$(curl -s -X POST $API/api/v1/jobs \
     -H "Content-Type: application/json" \
     -d "{\"job_name\":\"preempt-batch-$i\",\"engine\":\"spark\",\"target_cloud\":\"aws\",\"region\":\"us-west-1\",\"main_class\":\"org.apache.spark.examples.SparkPi\",\"artifact_uri\":\"local:///opt/spark/examples/jars/spark-examples_2.12-3.5.3.jar\",\"input_path\":\"s3://cross-cloud-data-platform-controller-us-west-1/input/\",\"output_path\":\"s3://cross-cloud-data-platform-controller-us-west-1/output/\",\"priority\":\"batch-low\"}")
   APP=$(echo $RESP | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('spark_application','?'))")
-  BATCH_APPS+=($APP)
   echo "  batch-$i → $APP"
 done
 
 sleep 5
-info "Queue state (look for ADMITTED batch workloads):"
-kubectl get workloads -n $NS --context $EKS_CTX 2>/dev/null | grep -E "QUEUE|batch" | head -10
+info "Batch workload queue state:"
+kubectl get workloads -n $NS --context $EKS_CTX 2>/dev/null | grep -E "QUEUE|batch" | head -8
 
-info "Now submitting interactive-high Flink job..."
+info "Submitting interactive-high Flink job..."
 config "flink" "aws" "us-west-1" "interactive-high"
 RESP=$(curl -s -X POST $API/api/v1/jobs \
   -H "Content-Type: application/json" \
@@ -248,16 +293,17 @@ RESP=$(curl -s -X POST $API/api/v1/jobs \
   }')
 echo "$RESP" | python3 -m json.tool
 
-info "Waiting 20s for Kueue to evaluate preemption..."
-sleep 20
+info "Waiting 25s for Kueue preemption evaluation..."
+sleep 25
 
-info "Preemption events (Reason=Preempted):"
+info "Preemption events:"
 kubectl get events -n $NS --context $EKS_CTX \
-  --field-selector reason=Preempted 2>/dev/null | cat
-echo "(if empty, all batch jobs completed before quota was exhausted — preemption not needed)"
+  --field-selector reason=Preempted 2>/dev/null | cat || true
+echo "(if empty: batch jobs completed before quota was exhausted — no preemption needed)"
 
-info "Final workload state:"
-kubectl get workloads -n $NS --context $EKS_CTX 2>/dev/null | grep -E "QUEUE|interactive|preempt" | head -10
+info "Workload state:"
+kubectl get workloads -n $NS --context $EKS_CTX 2>/dev/null \
+  | grep -E "QUEUE|interactive|preempt" | head -10
 pause
 
 # ── Case 7: Metrics Snapshot ───────────────────────────────────────────────
