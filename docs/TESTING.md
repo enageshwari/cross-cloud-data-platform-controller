@@ -127,6 +127,28 @@ created: 2026-09-01T17:02:54Z
 
 These tests require live clusters, port-forward to the deployed GKE pod, and both `EKS_CONTEXT` and `GKE_CONTEXT` configured. Run `kubectl port-forward svc/control-plane-api-svc 9090:80 -n data-workloads` before running any test in this section.
 
+### Running all cases end-to-end
+
+```bash
+# From repo root
+cd ~/nagelan/cross-cloud-data-platform-controller
+
+# Kill any existing port-forward on 9090
+lsof -ti :9090 | xargs kill -9 2>/dev/null
+
+# Start port-forward
+kubectl port-forward svc/control-plane-api-svc 9090:80 -n data-workloads &
+
+# Run all 7 cases
+./scripts/demo-run.sh
+
+# Or with explicit URL
+./scripts/demo-run.sh http://localhost:9090
+
+# Start from a specific case (e.g. skip cases 1-2, start from GCP Spark)
+./scripts/demo-run.sh http://localhost:9090 3
+```
+
 ### 3.1 Cross-Cloud Dispatch — Verified (all 4 paths)
 
 All four dispatch paths (Spark+Flink × AWS+GCP) verified from the deployed GKE pod via port-forward on 2026-09-02.

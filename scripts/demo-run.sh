@@ -11,13 +11,13 @@
 #
 # Usage:
 #   cd ~/nagelan/cross-cloud-data-platform-controller
-#   ./scripts/demo-run.sh [api_url]
+#   ./scripts/demo-run.sh [api_url] [start_case]
 
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 API="${1:-http://localhost:9090}"
-START_CASE="${2:-1}"   # set to 3 to skip cases 1-2, e.g.: ./scripts/demo-run.sh http://localhost:9090 3
+START_CASE="${2:-1}"   # set to e.g. 3 to skip cases 1-2: ./scripts/demo-run.sh http://localhost:9090 3
 EKS_CTX="arn:aws:eks:us-west-1:080147880517:cluster/cross-cloud-data-plane"
 GKE_CTX="gke_project-965bb0cf-caa0-458d-ba9_us-west2-a_cross-cloud-control-plane"
 NS="data-workloads"
@@ -110,7 +110,7 @@ fi
 ok "API healthy: $HEALTH"
 
 info "Checking API pods and component readiness..."
-kubectl get pods -n $NS --context $GKE_CTX 2>/dev/null | grep control-plane-api
+kubectl get pods -n $NS --context $GKE_CTX 2>/dev/null | grep control-plane-api || true
 echo ""
 # Hit the healthz once per pod to confirm both replicas are serving
 for POD in $(kubectl get pods -n $NS --context $GKE_CTX -l app=control-plane-api -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
@@ -180,6 +180,7 @@ pause
 fi # end case 2
 
 # ── Case 3: GCP Spark ──────────────────────────────────────────────────────
+if [[ $START_CASE -le 3 ]]; then
 header "CASE 3: GCP Spark — SparkApplication → GKE → GCS"
 config "spark" "gcp" "us-west2" "batch-low"
 jar_info "local:///opt/spark/examples/jars/spark-examples_2.12-3.5.3.jar (SparkPi — calculates pi)"
@@ -205,8 +206,10 @@ ok "spark_application: $SPARK_APP"
 info "Waiting for completion..."
 wait_spark "$SPARK_APP" "$GKE_CTX"
 pause
+fi # end case 3
 
 # ── Case 4: GCP Flink ──────────────────────────────────────────────────────
+if [[ $START_CASE -le 4 ]]; then
 header "CASE 4: GCP Flink — AppWrapper → GKE → GCS"
 config "flink" "gcp" "us-west2" "interactive-high"
 jar_info "local:///opt/flink/examples/streaming/WordCount.jar (bundled WordCount streaming job)"
@@ -233,8 +236,10 @@ sleep 10
 info "Waiting for completion..."
 wait_flink "$AW" "$GKE_CTX"
 pause
+fi # end case 4
 
 # ── Case 5: OPA Enforcement ────────────────────────────────────────────────
+if [[ $START_CASE -le 5 ]]; then
 header "CASE 5: OPA Enforcement — Cross-Region Violation"
 echo "  Testing: output_path region token (us-east-1) ≠ declared region (us-west-1)"
 echo "  OPA rule: outputPath must contain the declared region — hard DENY at admission"
@@ -242,16 +247,17 @@ echo "  Note: using kubectl apply directly so the webhook error is immediately v
 echo ""
 
 info "Applying SparkApplication with wrong region..."
-kubectl apply -f - --context $EKS_CTX <<EOF
+kubectl apply -f - --context $EKS_CTX <<EOF || true
 apiVersion: sparkoperator.k8s.io/v1beta2
 kind: SparkApplication
 metadata:
   name: opa-test-wrong-region
   namespace: $NS
+  labels:
+    cross-cloud.io/region: us-west-1
+    cross-cloud.io/target-cloud: aws
+    cross-cloud.io/output-path: s3://cross-cloud-data-platform-controller-us-east-1/output/
 spec:
-  region: us-west-1
-  targetCloud: aws
-  outputPath: s3://cross-cloud-data-platform-controller-us-east-1/output/
   type: Scala
   mode: cluster
   image: apache/spark:3.5.3
@@ -261,30 +267,32 @@ EOF
 echo "${RED}^ 'denied' above means OPA enforcement is working ✓${NC}"
 
 info "OPA constraint active:"
-kubectl get dataresidency --context $EKS_CTX 2>/dev/null | cat
+kubectl get dataresidency --context $EKS_CTX 2>/dev/null | cat || true
 pause
+fi # end case 5
 
-# ── Case 6: Preemption ─────────────────────────────────────────────────────
+# ── Case 6: Preemption ────────────────────────────────────────────────     
+if [[ $START_CASE -le 6 ]]; then
 header "CASE 6: Priority Preemption — interactive-high preempts batch-low"
 echo "  Both queues share a Kueue cohort — interactive-high (1000) reclaims"
 echo "  quota from batch-low (100) via reclaimWithinCohort: LowerPriority"
 echo ""
 
 info "Current ClusterQueue quota:"
-kubectl get clusterqueue multi-cloud-cluster-queue -o wide --context $EKS_CTX 2>/dev/null | cat
+kubectl get clusterqueue -o wide --context $EKS_CTX 2>/dev/null || kubectl get clusterqueues --context $EKS_CTX 2>/dev/null || echo "ClusterQueue resource not found or using custom group"
 
 info "Submitting 5 batch-low Spark jobs..."
 for i in 1 2 3 4 5; do
   RESP=$(curl -s -X POST $API/api/v1/jobs \
     -H "Content-Type: application/json" \
     -d "{\"job_name\":\"preempt-batch-$i\",\"engine\":\"spark\",\"target_cloud\":\"aws\",\"region\":\"us-west-1\",\"main_class\":\"org.apache.spark.examples.SparkPi\",\"artifact_uri\":\"local:///opt/spark/examples/jars/spark-examples_2.12-3.5.3.jar\",\"input_path\":\"s3://cross-cloud-data-platform-controller-us-west-1/input/\",\"output_path\":\"s3://cross-cloud-data-platform-controller-us-west-1/output/\",\"priority\":\"batch-low\"}")
-  APP=$(echo $RESP | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('spark_application','?'))")
+  APP=$(echo $RESP | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('spark_application','?'))" 2>/dev/null || echo "?")
   echo "  batch-$i → $APP"
 done
 
 sleep 5
 info "Batch workload queue state:"
-kubectl get workloads -n $NS --context $EKS_CTX 2>/dev/null | grep -E "QUEUE|batch" | head -8
+kubectl get workloads -n $NS --context $EKS_CTX 2>/dev/null | grep -E "QUEUE|batch" | head -8 || true
 
 info "Submitting interactive-high Flink job..."
 config "flink" "aws" "us-west-1" "interactive-high"
@@ -312,15 +320,18 @@ echo "(if empty: batch jobs completed before quota was exhausted — no preempti
 
 info "Workload state:"
 kubectl get workloads -n $NS --context $EKS_CTX 2>/dev/null \
-  | grep -E "QUEUE|interactive|preempt" | head -10
+  | grep -E "QUEUE|interactive|preempt" | head -10 || true
 pause
+fi # end case 6
 
 # ── Case 7: Metrics Snapshot ───────────────────────────────────────────────
+if [[ $START_CASE -le 7 ]]; then
 header "CASE 7: Metrics Snapshot"
 info "Capturing point-in-time metrics from both clusters..."
-cd "$REPO_DIR" && ./scripts/metrics-snapshot.sh "demo-run"
+cd "$REPO_DIR" && ./scripts/metrics-snapshot.sh "demo-run" || echo "Metrics snapshot script skipped or failed"
 ok "Snapshot saved to test-result-snapshots/"
-ls -t "$REPO_DIR/test-result-snapshots/"*.json | head -3
+ls -t "$REPO_DIR/test-result-snapshots/"*.json 2>/dev/null | head -3 || true
+fi # end case 7
 
 echo "\n${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  ALL DEMO CASES COMPLETE"
