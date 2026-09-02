@@ -82,9 +82,9 @@ All 4 dispatch paths verified end-to-end from the deployed GKE pod (2026-09-02):
 
 | Path | Job ID | Result |
 |---|---|---|
-| AWS Spark | `aws-spark-verify-17883733260108` | COMPLETED |
-| AWS Flink | `aws-flink-verify-17883733269713` | FINISHED/STABLE |
-| GCP Spark | `gcp-spark-test-17883723573466` | COMPLETED |
-| GCP Flink | `gcp-flink-test-17883726767214` | FINISHED/STABLE |
+| AWS Spark | `aws-spark-verify-17883733260108` | ✅ Verified |
+| AWS Flink | `aws-flink-verify-17883733269713` | ✅ Verified |
+| GCP Spark | `gcp-spark-test-17883723573466` | ✅ Verified |
+| GCP Flink | `gcp-flink-test-17883726767214` | ✅ Verified |
 
 See [`docs/TESTING.md`](docs/TESTING.md) for full test methodology, OPA enforcement evidence, preemption test results, and autoscale evidence.
