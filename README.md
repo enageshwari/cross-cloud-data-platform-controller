@@ -64,29 +64,12 @@ kubectl create secret generic cross-cloud-kubeconfig \
 ## Project Layout
 
 ```
-api/                               Go control plane
-  cmd/server/main.go               Entry point — initialises all 6 components on startup
-  internal/handler/jobs.go         HTTP handler — routes by (engine, target_cloud)
-  internal/spark/submitter.go      SparkApplication CRD submitter (dynamic K8s client)
-  internal/flink/submitter.go      AppWrapper CRD submitter (dynamic K8s client)
-  internal/presigner/              S3 presigner (AWS SDK v2) + GCS signer (IAM SignBlob)
-  internal/validator/              Schema validation
-  internal/model/job.go            Request/response structs
-  Dockerfile                       Multi-stage distroless build
-
-deploy/
-  gke-control-plane/               Deployment, Service, ServiceAccount, PDB, RBAC
-  aws-eks/                         eksctl cluster config, Spot node group, CA policy
-  gcp-gke/                         Preemptible node pool (not yet provisioned)
-
-policy/
-  templates/                       OPA ConstraintTemplate — DataResidency (Rego)
-  constraints/                     DataResidency constraint (enforce mode)
-
-scheduler/kueue/                   ClusterQueue, LocalQueues, ResourceFlavors, Prometheus
-scripts/                           Test and ops scripts — run demo: ./scripts/demo-run.sh
-test-result-snapshots/             Captured metrics, preemption evidence, CA logs
-docs/                              DESIGN, REQUIREMENTS, TESTING, CONTRIBUTIONS, TROUBLESHOOTING
+api/internal/          Go — handler, spark/flink submitters, S3/GCS presigners, validator
+policy/templates/      OPA ConstraintTemplate (Rego)
+scheduler/kueue/       Kueue ClusterQueue, LocalQueues, ResourceFlavors
+deploy/                GKE, EKS, and GCP cluster manifests + RBAC
+scripts/demo-run.sh    Runs all 7 demo test cases end-to-end
+docs/                  DESIGN, REQUIREMENTS, TESTING, CONTRIBUTIONS, TROUBLESHOOTING
 ```
 
 ## Architecture
