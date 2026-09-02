@@ -190,6 +190,23 @@ SPARK_AWS_JAR="s3://your-bucket/jars/my-etl-1.0.jar"
 SPARK_AWS_CLASS="com.example.MyETLJob"
 ```
 
+**Bundled vs custom JAR — what the demo uses:**
+
+| Prefix | Meaning | Used in |
+|---|---|---|
+| `local:///opt/spark/...` | JAR bundled inside the container image — no upload needed | `demo-run.sh`, `custom-job-test.sh` defaults |
+| `s3://bucket/jars/my.jar` | Your JAR fetched from S3 at job start | Real ETL workloads on AWS |
+| `gs://bucket/jars/my.jar` | Your JAR fetched from GCS at job start | Real ETL workloads on GCP |
+
+The bundled JARs (`SparkPi`, `WordCount`) are used throughout the demo because they work on any fresh cluster with zero setup. They run real computations — SparkPi calculates pi via Monte Carlo, WordCount processes a text stream — but they don't read from your input bucket.
+
+**To test with a real custom JAR:**
+1. Upload your JAR: `aws s3 cp my-etl.jar s3://cross-cloud-data-platform-controller-us-west-1/jars/`
+2. Edit `scripts/custom-job-test.sh` — set `SPARK_AWS_JAR`, `SPARK_AWS_CLASS`, `SPARK_AWS_ARGS`
+3. Run: `./scripts/custom-job-test.sh http://localhost:9090`
+
+The API, OPA enforcement, Kueue scheduling, and IRSA credential flow are identical regardless of whether you use a bundled or custom JAR.
+
 ### 3.2 GKE Deployment Functional Test
 
 Verified live on GKE cluster:
