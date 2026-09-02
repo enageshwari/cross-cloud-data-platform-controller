@@ -52,8 +52,9 @@ fi
 ok "API healthy: $HEALTH"
 
 info "Checking API startup logs (all 6 components)..."
-kubectl logs -n $NS -l app=control-plane-api --context $GKE_CTX 2>/dev/null \
-  | grep -E "submitter ready|presigner ready|API starting" | tail -7 || true
+kubectl logs -n $NS -l app=control-plane-api --context $GKE_CTX --since=2h 2>/dev/null \
+  | grep -E "submitter ready|presigner ready|API starting" | tail -7 \
+  || echo "  (startup logs not found — pods may have been running > 2h; check manually)"
 
 pause
 
