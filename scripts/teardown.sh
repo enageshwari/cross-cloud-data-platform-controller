@@ -99,7 +99,7 @@ ok "EKS cluster deleted"
 
 # ── GCP Teardown ──────────────────────────────────────────────────────────
 step "GCP: Empty GCS bucket (delete all objects)"
-run "gcloud storage rm -r gs://$GCS_BUCKET/** \
+run "gcloud storage rm 'gs://$GCS_BUCKET/**' \
   --project=$GCP_PROJECT 2>/dev/null || true"
 ok "GCS bucket emptied"
 
@@ -111,6 +111,17 @@ run "gcloud container clusters delete $GKE_CLUSTER \
   --quiet"
 ok "GKE cluster deleted"
 
+step "GCP: Delete Artifact Registry image"
+run "gcloud artifacts docker images delete \
+  us-west2-docker.pkg.dev/$GCP_PROJECT/cross-cloud-api/control-api \
+  --project=$GCP_PROJECT --quiet 2>/dev/null || true"
+ok "Artifact Registry image deleted"
+
+step "GCP: Empty Cloud Build source bucket"
+run "gcloud storage rm 'gs://${GCP_PROJECT}_cloudbuild/source/**' \
+  --project=$GCP_PROJECT 2>/dev/null || true"
+ok "Cloud Build source tarballs deleted"
+
 # ── Summary ───────────────────────────────────────────────────────────────
 echo ""
 echo "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -119,9 +130,8 @@ if [[ "$DRY_RUN" == "true" ]]; then
 else
   echo "  TEARDOWN COMPLETE"
   echo ""
-  echo "  Remaining (not deleted by this script):"
-  echo "    AWS IAM user cross-cloud-presigner (keys only — delete manually)"
+  echo "  Remaining (not deleted by this script — no cost):"
+  echo "    AWS IAM user cross-cloud-presigner (delete manually if no longer needed)"
   echo "    GCP SA gcs-presigner (delete in IAM console if no longer needed)"
-  echo "    GCP Artifact Registry image (delete in Artifact Registry console)"
 fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
