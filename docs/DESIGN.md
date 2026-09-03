@@ -21,9 +21,9 @@ A single GKE management cluster houses the Go control plane, OPA policy engine, 
 │  │  Go Control API                                                      │  │
 │  │  POST /api/v1/jobs                                                   │  │
 │  │  • Schema validation           • S3 presigner (AWS SDK v2)           │  │
-│  │  • GCS signer (IAM SignBlob)   • SparkApplication / AppWrapper CRD  │  │
-│  │  • cross-cloud-kubeconfig Secret (static SA tokens, 24h TTL)        │  │
-│  └─────────────────────────────────┬────────────────────────────────────┘  │
+│  │  • GCS signer (IAM SignBlob)   • SparkApplication / AppWrapper CRD   │  │
+│  │  • cross-cloud-kubeconfig Secret (static SA tokens, 24h TTL)         │  │
+│  └────────────────────────────────-─┬───────────────────────────────────┘  │
 └─────────────────────────────────────┼──────────────────────────────────────┘
                                       │  Dispatch CRD + signed credential
                      ┌────────────────┴────────────────┐
@@ -45,9 +45,9 @@ A single GKE management cluster houses the Go control plane, OPA policy engine, 
 │  AppWrapper controller    │   │  AppWrapper controller    │
 │  Cluster Autoscaler       │   │  Workload Identity        │
 └─────────────┬─────────────┘   └─────────────┬─────────────┘
-              │ IRSA                           │ Workload Identity
-              │ (no credentials in pod)        │ (no credentials in pod)
-              ▼                                ▼
+              │ IRSA                          │ Workload Identity
+              │ (no credentials in pod)       │ (no credentials in pod)
+              ▼                               ▼
 ┌─────────────────────────┐     ┌─────────────────────────┐
 │  AWS S3                 │     │  GCP GCS                │
 │  us-west-1  (private)   │     │  us-west2   (private)   │
