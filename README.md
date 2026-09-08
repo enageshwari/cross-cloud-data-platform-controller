@@ -2,17 +2,17 @@
 
 A GKE-hosted control plane for submitting and governing Spark and Flink batch workloads across AWS EKS and GCP GKE data planes. A single REST API handles job submission for both clouds — OPA Gatekeeper enforces regional data residency at admission time, Kueue manages priority scheduling and preemption, and Cluster Autoscaler eliminates idle compute cost.
 
-Architecture overview video:
-
-https://drive.google.com/file/d/16f5W_3OpSPiMcGR1Moo-Aqn3GpVxTQed/view?usp=share_link
-
-CP: https://drive.google.com/file/d/1_5EXwM9VzYr4idVy1qFj0i38ssTnHnSJ/view?usp=drive_link
-
-DP: https://drive.google.com/file/d/1-XLbnTOZlUtUZH36DZJVNFPQpUzAnToH/view?usp=drive_link
+Architecture overview video: https://drive.google.com/file/d/16f5W_3OpSPiMcGR1Moo-Aqn3GpVxTQed/view?usp=share_link
 
 Demo video:
 
 https://drive.google.com/file/d/10iZX5Mx1pAOiilGkonmLfnuTZ793t0EA/view?usp=share_link
+
+Architectural Images:
+
+CP: https://drive.google.com/file/d/1_5EXwM9VzYr4idVy1qFj0i38ssTnHnSJ/view?usp=drive_link
+
+DP: https://drive.google.com/file/d/1-XLbnTOZlUtUZH36DZJVNFPQpUzAnToH/view?usp=drive_link
 
 ## Quick Start — Local (no cloud required)
 
